@@ -225,7 +225,7 @@ public:
     linkage(UNSPECIFIED_TYPE),
     is_lateral(false),
     message(NULL),
-    having(NULL), having_value(Item::COND_UNDEF),
+    having(NULL), having_value(Item::COND_UNDEF), having_shortcut(false),
     using_temporary(false), using_filesort(false),
     cost(0.0),
     time_tracker(is_analyze),
@@ -255,6 +255,8 @@ public:
   /* HAVING condition */
   Item *having;
   Item::cond_result having_value;
+  /* The scan stops early once HAVING is false (MDEV-38303) */
+  bool having_shortcut;
 
   /* Global join attributes. In tabular form, they are printed on the first row */
   bool using_temporary;

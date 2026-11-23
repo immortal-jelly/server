@@ -1236,6 +1236,8 @@ void Explain_select::print_explain_json(Explain_query *query,
         writer->add_str("0");
       }
     }
+    if (having_shortcut)
+      writer->add_member("having_shortcut").add_bool(true);
 
     int started_objects= 0;
     

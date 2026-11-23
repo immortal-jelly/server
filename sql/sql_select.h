@@ -1789,6 +1789,15 @@ public:
   Item_sum  **sum_funcs2, ***sum_funcs_end2;
   Procedure *procedure;
   Item	    *having;
+  /**
+    AND-parts of HAVING that stay FALSE once they become FALSE, so the scan
+    can stop (MDEV-38303). Filled by setup_having_stop_conds().
+    Conjuncts past the cap are ignored: they only lose the early stop. The
+    cap also bounds the per-row check cost.
+  */
+  static const uint MAX_HAVING_STOP_CONDS= 4;
+  Item *having_stop_conds[MAX_HAVING_STOP_CONDS];
+  uint having_stop_cond_count;
   Item      *tmp_having; ///< To store having when processed temporary table
   Item      *having_history; ///< Store having for explain
   ORDER     *group_list_for_estimates;
@@ -1824,6 +1833,27 @@ public:
     restore_no_rows_in_result() in ::reinit()
   */
   bool no_rows_in_result_called;
+
+  void setup_having_stop_conds();
+  /**
+    @retval NESTED_LOOP_QUERY_LIMIT  a stop condition is FALSE (not NULL), so
+                                     HAVING can no longer be TRUE
+    @retval NESTED_LOOP_ERROR        evaluating a condition failed
+    @retval ok                       otherwise
+  */
+  enum_nested_loop_state do_having_shortcut(enum_nested_loop_state ok) const
+  {
+    for (uint i= 0; i < having_stop_cond_count; i++)
+    {
+      Item *cond= having_stop_conds[i];
+      bool res= cond->val_bool();
+      if (thd->is_error())
+        return NESTED_LOOP_ERROR;
+      if (!res && !cond->null_value)
+        return NESTED_LOOP_QUERY_LIMIT;
+    }
+    return ok;
+  }
 
   /**
     This is set if SQL_CALC_ROWS was calculated by filesort()

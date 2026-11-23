@@ -520,6 +520,7 @@ void JOIN::init(THD *thd_arg, List<Item> &fields_arg,
   procedure= 0;
   having= tmp_having= having_history= 0;
   having_is_correlated= false;
+  having_stop_cond_count= 0;
   group_list_for_estimates= 0;
   select_options= select_options_arg;
   result= result_arg;
@@ -4414,6 +4415,7 @@ bool JOIN::make_aggr_tables_info()
     join_tab[exec_join_tab_cnt() + aggr_tables - 1].next_select=
       setup_end_select_func(this);
   group= has_group_by;
+  setup_having_stop_conds();
 
   DBUG_RETURN(false);
 }
@@ -27173,7 +27175,7 @@ end_send_group(JOIN *join, JOIN_TAB *join_tab, bool end_of_records)
 	join->procedure->add();
       join->group_sent= false;
       join->accepted_rows++;
-      DBUG_RETURN(ok_code);
+      DBUG_RETURN(join->do_having_shortcut(ok_code));
     }
   }
   if (update_sum_func(join->sum_funcs))
@@ -27181,7 +27183,7 @@ end_send_group(JOIN *join, JOIN_TAB *join_tab, bool end_of_records)
   join->accepted_rows++;
   if (join->procedure)
     join->procedure->add();
-  DBUG_RETURN(NESTED_LOOP_OK);
+  DBUG_RETURN(join->do_having_shortcut(NESTED_LOOP_OK));
 }
 
 
@@ -32671,6 +32673,7 @@ int JOIN::save_explain_data_intern(Explain_query *output,
     else
       xpl_sel->having= having;
     xpl_sel->having_value= having_value;
+    xpl_sel->having_shortcut= (having_stop_cond_count > 0);
 
     JOIN_TAB* const first_top_tab= join->first_breadth_first_tab();
     JOIN_TAB* prev_bush_root_tab= NULL;
