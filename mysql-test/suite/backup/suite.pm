@@ -26,6 +26,7 @@ sub skip_combinations {
     $skip{'backup_stream_debug.test'} = $needs;
     $skip{'backup_aria_stream_concurrent.test'} = $needs;
     $skip{'backup_innodb_data_directory.test'} = $needs;
+    $skip{'backup_rocksdb_stream.test'} = $needs;
   }
   %skip;
 }
